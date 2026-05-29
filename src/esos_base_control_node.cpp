@@ -308,6 +308,8 @@ int main(int argc, char **argv) {
         rclcpp::spin(std::make_shared<EsosBaseControlNode>());
     } catch (const std::exception &e) {
         fprintf(stderr, "esos_base_control_node exception: %s\n", e.what());
+        rclcpp::shutdown();
+        return 1;
     }
     rclcpp::shutdown();
     return 0;

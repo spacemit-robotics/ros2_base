@@ -1,0 +1,39 @@
+## Copyright (C) 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+## SPDX-License-Identifier: Apache-2.0
+
+module: middleware/ros2/control/base
+
+tests:
+  - name: base-launch-contract
+    description: >-
+      Verifies the ESOS base control launch description exposes safe defaults
+      and wires every launch argument into node parameters, so callers can
+      configure odometry frames, control rates and RPMsg endpoints without
+      editing source files.
+    category: functional
+    scopes: [pr]
+    timeout_s: 120
+    workdir: sdk
+    requires:
+      commands: [bash, python3]
+    artifacts:
+      - output/test/pr/middleware__ros2__control__base/modules/middleware__ros2__control__base/logs/base_launch_contract.log
+    command: |
+      bash middleware/ros2/control/base/tests/test_launch_contract.sh
+
+  - name: base-invalid-rpmsg-device
+    description: >-
+      Starts esos_base_control_node with invalid RPMsg device paths and verifies
+      it fails quickly with an explicit chassis initialization error instead of
+      hanging or silently running without a base controller.
+    category: functional
+    scopes: [pr]
+    timeout_s: 180
+    workdir: sdk
+    requires:
+      commands: [bash, python3]
+    artifacts:
+      - output/test/pr/middleware__ros2__control__base/modules/middleware__ros2__control__base/logs/base_invalid_rpmsg_device.log
+      - output/test/pr/middleware__ros2__control__base/modules/middleware__ros2__control__base/logs/base_invalid_rpmsg_device.run.log
+    command: |
+      bash middleware/ros2/control/base/tests/test_invalid_rpmsg_device.sh
