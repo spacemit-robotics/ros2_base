@@ -44,6 +44,9 @@ public:
     declare_parameter("send_hz", 20.0);
     declare_parameter("odom_hz", 50.0);
     declare_parameter("cmd_vel_timeout", 0.4);
+    declare_parameter("deadzone_epsilon", 0.001);
+    declare_parameter("min_linear_velocity", 0.04);
+    declare_parameter("min_angular_velocity", 0.41);
     declare_parameter("publish_tf", true);
     declare_parameter("odom_topic", "odom");
     declare_parameter("odom_frame", "odom");
@@ -73,6 +76,9 @@ public:
     send_hz_ = get_parameter("send_hz").as_double();
     odom_hz_ = get_parameter("odom_hz").as_double();
     cmd_vel_timeout_ = get_parameter("cmd_vel_timeout").as_double();
+    deadzone_epsilon_ = get_parameter("deadzone_epsilon").as_double();
+    min_linear_velocity_ = get_parameter("min_linear_velocity").as_double();
+    min_angular_velocity_ = get_parameter("min_angular_velocity").as_double();
     publish_tf_ = get_parameter("publish_tf").as_bool();
     odom_topic_ = get_parameter("odom_topic").as_string();
     odom_frame_ = get_parameter("odom_frame").as_string();
@@ -124,8 +130,9 @@ public:
 
                         RCLCPP_INFO(
                                 get_logger(),
-                                "esos_base_control_node started: wheel_diameter=%.4f, wheel_base=%.4f",
-                                wheel_diameter_, wheel_base_);
+                                "esos_base_control_node started: wheel_diameter=%.4f, wheel_base=%.4f, min_linear_velocity=%.4f, min_angular_velocity=%.4f",
+                                wheel_diameter_, wheel_base_, min_linear_velocity_,
+                                min_angular_velocity_);
         }
 
         ~EsosBaseControlNode() override {
@@ -173,8 +180,8 @@ private:
     }
 
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-        double vx = msg->linear.x;
-        double wz = msg->angular.z;
+        double vx = apply_min_velocity(msg->linear.x, min_linear_velocity_);
+        double wz = apply_min_velocity(msg->angular.z, min_angular_velocity_);
 
         // Apply motor factors for wheel speed correction
         // Decompose to wheel speeds, apply factors, then recompose
@@ -197,6 +204,17 @@ private:
         }
 
         last_cmd_time_ = now();
+    }
+
+    double apply_min_velocity(double value, double min_velocity) const {
+        const double abs_value = std::abs(value);
+        if (abs_value <= deadzone_epsilon_) {
+            return 0.0;
+        }
+        if (abs_value < min_velocity) {
+            return std::copysign(min_velocity, value);
+        }
+        return value;
     }
 
     void odom_timer_callback() {
@@ -271,6 +289,9 @@ private:
     double send_hz_;
     double odom_hz_;
     double cmd_vel_timeout_;
+    double deadzone_epsilon_;
+    double min_linear_velocity_;
+    double min_angular_velocity_;
     bool publish_tf_;
     std::string odom_topic_;
     std::string odom_frame_;
